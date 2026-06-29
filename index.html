@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>كنيسة السيدة العذراء مريم والأنبا بيشوي</title>
-    <!-- رابط الـ PWA المدمج بالأيقونة الخاصة بك -->
-    <link id="manifest-link" rel="manifest" href="">
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#075e54">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="الكنيسة">
+    <link rel="apple-touch-icon" href="icona.png">
+
     <style>
         /* إعدادات عامة */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -33,9 +39,6 @@
             transition: 0.3s;
         }
         #enter-btn:hover { background: #e0e0e0; transform: scale(1.05); }
-
-        /* تلميح التحميل المخفي */
-        #cache-status { font-size: 12px; color: #fff; margin-top: 10px; opacity: 0.7; }
 
         /* تصميم التطبيق الأساسي */
         #main-app { display: flex; flex-direction: column; height: 100vh; }
@@ -87,23 +90,19 @@
 </head>
 <body>
 
-    <!-- شاشة الترحيب -->
     <div id="intro-screen">
         <img src="kanesa.png" alt="صورة الكنيسة" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2069/2069818.png'">
         <h1 class="welcome-text">مرحباً بكم في موقع كنيسة السيدة العذراء مريم والأنبا بيشوي بطهنا الجبل</h1>
         <h3 class="credits-text">تم عمله بواسطة: كاراس مدحت صابر</h3>
         <button id="enter-btn" onclick="enterSite()">دخول الموقع</button>
-        <div id="cache-status">جاري تهيئة الملفات للعمل بدون إنترنت...</div>
     </div>
 
-    <!-- التطبيق الأساسي -->
     <div id="main-app" class="hidden">
         <header>
             <h2 id="header-title">شات الكنيسة</h2>
         </header>
 
         <main>
-            <!-- قسم الشات -->
             <section id="tab-chat" class="page-content" style="padding:0; height: 100%;">
                 <div id="chat-login">
                     <h3 style="margin-bottom: 20px; color: #075e54;">مرحباً بك في شات الكنيسة</h3>
@@ -119,16 +118,13 @@
                 </div>
             </section>
 
-            <!-- قسم الألحان -->
             <section id="tab-alhan" class="page-content hidden">
             </section>
 
-            <!-- قسم الترانيم -->
             <section id="tab-taranim" class="page-content hidden">
             </section>
         </main>
 
-        <!-- التوجيه السفلي -->
         <nav class="bottom-nav">
             <button class="nav-btn active" onclick="switchTab('chat', 'شات الكنيسة')">الشات</button>
             <button class="nav-btn" onclick="switchTab('alhan', 'قسم الألحان')">الألحان</button>
@@ -136,20 +132,15 @@
         </nav>
     </div>
 
-    <!-- كود الـ Frontend والتحميل الذكي والـ PWA -->
     <script>
-        // إعداد الـ Manifest الخاص بالـ PWA مدمجاً بـ icona.png
-        const manifestData = {
-            name: "كنيسة العذراء والأنبا بيشوي",
-            short_name: "الكنيسة",
-            start_url: ".",
-            display: "standalone",
-            background_color: "#f0f2f5",
-            theme_color: "#075e54",
-            icons: [{ src: "icona.png", sizes: "192x192", type: "image/png" }]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-        document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
+        // تسجيل الـ Service Worker الحقيقي من الملف الخارجي sw.js لتفعيل الـ PWA بالكامل
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('تم تسجيل الـ Service Worker بنجاح!', reg))
+                .catch(err => console.log('فشل تسجيل الـ Service Worker:', err));
+            });
+        }
 
         // دخول الموقع
         function enterSite() {
@@ -167,7 +158,7 @@
             document.getElementById('header-title').innerText = title;
         }
 
-        // توليد كروت الألحان والترانيم بـ data-src للتحكم في الكاش
+        // توليد كروت الألحان والترانيم
         function generateAudioCards(containerId, prefix, namePrefix, count) {
             const container = document.getElementById(containerId);
             for (let i = 1; i <= count; i++) {
@@ -175,7 +166,8 @@
                 container.innerHTML += `
                     <div class="audio-card">
                         <h4>${namePrefix} رقم ${i}</h4>
-                        <audio controls controlsList="nodownload" data-src="${fileName}">
+                        <audio controls controlsList="nodownload">
+                            <source src="${fileName}" type="audio/mpeg">
                             متصفحك لا يدعم تشغيل الصوت.
                         </audio>
                     </div>
@@ -184,52 +176,8 @@
         }
         generateAudioCards('tab-alhan', 'Lhn', 'لحن', 5);
         generateAudioCards('tab-taranim', 'Tranem', 'ترنيمة', 5);
-
-        // الخوارزمية الذكية لحفظ الألحان والترانيم والصور داخل المتصفح للعمل بدون إنترنت (Offline Caching)
-        async function initOfflineCache() {
-            const CACHE_NAME = 'church-media-v2';
-            const filesToCache = ['kanesa.png', 'icona.png'];
-            for(let i=1; i<=5; i++) {
-                filesToCache.push(`Lhn${i}.mp3`);
-                filesToCache.push(`Tranem${i}.mp3`);
-            }
-
-            try {
-                const cache = await caches.open(CACHE_NAME);
-                
-                // تحميل الملفات في الخلفية إذا لم تكن موجودة بالكاش
-                for (const file of filesToCache) {
-                    const matched = await cache.match(file);
-                    if (!matched) {
-                        fetch(file).then(response => {
-                            if (response.ok) cache.put(file, response);
-                        }).catch(err => console.log("جاري الانتظار لتوفر الملف أونلاين: " + file));
-                    }
-                }
-                
-                // تشغيل الملفات الصوتية مباشرة من الكاش المحلي
-                const audios = document.querySelectorAll('audio[data-src]');
-                for (const audio of audios) {
-                    const src = audio.getAttribute('data-src');
-                    const localResponse = await cache.match(src);
-                    if (localResponse) {
-                        const blob = await localResponse.blob();
-                        audio.src = URL.createObjectURL(blob);
-                    } else {
-                        audio.src = src; // Fallback أونلاين لو لسه مخلصش تحميل
-                    }
-                }
-                document.getElementById('cache-status').innerText = "تم حفظ البيانات محلياً وجاهز للعمل أوفلاين ✨";
-            } catch (e) {
-                console.log("Cache API space ready.");
-            }
-        }
-
-        // تشغيل نظام الكاش فور تحميل الصفحة
-        window.addEventListener('DOMContentLoaded', initOfflineCache);
     </script>
 
-    <!-- برمجة الفايربيز وحفظ الاسم تلقائياً (Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
@@ -266,7 +214,7 @@
         document.getElementById('join-chat-btn').addEventListener('click', () => {
             const nameInput = document.getElementById('username-input').value.trim();
             if (nameInput) {
-                localStorage.setItem('chat_username', nameInput); // حفظ الاسم هنا
+                localStorage.setItem('chat_username', nameInput);
                 currentUser = nameInput;
                 document.getElementById('chat-login').classList.add('hidden');
                 document.getElementById('chat-room').classList.remove('hidden');
