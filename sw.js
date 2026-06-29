@@ -1,24 +1,21 @@
-const CACHE_NAME = 'church-app-v3';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'church-app-v4';
+// هنحفظ بس أساسيات الموقع هنا، والصوتيات هتتحفظ من واجهة الموقع عشان نعرض شريط التحميل
+const CORE_ASSETS = [
   'index.html',
   'manifest.json',
   'kanesa.png',
-  'icona.png',
-  'Lhn1.mp3', 'Lhn2.mp3', 'Lhn3.mp3', 'Lhn4.mp3', 'Lhn5.mp3',
-  'Tranem1.mp3', 'Tranem2.mp3', 'Tranem3.mp3', 'Tranem4.mp3', 'Tranem5.mp3'
+  'icona.png'
 ];
 
-// تثبيت التطبيق وحفظ الملفات في الكاش فوراً
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(CORE_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-// تفعيل السيرفيس وركر
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -34,19 +31,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// استدعاء الملفات من الكاش مباشرة (تشغيل سريع وبدون إنترنت)
 self.addEventListener('fetch', (event) => {
-  // تخطي روابط الفايربيز عشان الشات يفضل لايف وميتكشش
+  // تخطي روابط الفايربيز عشان الشات يشتغل لايف
   if (event.request.url.includes('firebase') || event.request.url.includes('google')) {
     return;
   }
-
+  
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request);
+      // لو الملف موجود في الكاش هيرجعه فوراً، لو مش موجود هيحمله من النت
+      return cachedResponse || fetch(event.request);
     })
   );
 });

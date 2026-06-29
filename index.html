@@ -13,12 +13,10 @@
     <link rel="apple-touch-icon" href="icona.png">
 
     <style>
-        /* إعدادات عامة */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f0f2f5; overflow-x: hidden; }
         .hidden { display: none !important; }
 
-        /* شاشة الافتتاحية */
         #intro-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
             background: linear-gradient(135deg, #1a2a6c, #11998e, #38ef7d);
@@ -40,12 +38,10 @@
         }
         #enter-btn:hover { background: #e0e0e0; transform: scale(1.05); }
 
-        /* تصميم التطبيق الأساسي */
         #main-app { display: flex; flex-direction: column; height: 100vh; }
         header { background-color: #075e54; color: white; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; }
         main { flex: 1; overflow-y: auto; padding-bottom: 60px; background: #e5ddd5; }
         
-        /* الأقسام (ألحان وترانيم) */
         .page-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .audio-card {
             background: white; padding: 15px; border-radius: 10px;
@@ -54,7 +50,12 @@
         .audio-card h4 { color: #075e54; margin: 0; }
         audio { width: 100%; outline: none; }
 
-        /* الشات */
+        /* تصميم شريط التحميل */
+        .download-status { margin-top: 5px; display: flex; flex-direction: column; gap: 5px; }
+        .progress-bar-container { width: 100%; height: 6px; background: #e0e0e0; border-radius: 5px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: #25D366; transition: width 0.2s ease; }
+        .status-text { font-size: 13px; font-weight: bold; color: #555; }
+
         #chat-section { height: 100%; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
         #chat-login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
         #chat-login input { padding: 15px; width: 80%; max-width: 300px; border-radius: 25px; border: 1px solid #ccc; margin-bottom: 15px; text-align: center; font-size: 16px; }
@@ -64,24 +65,20 @@
         #messages-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .msg-box { max-width: 75%; padding: 10px 15px; border-radius: 15px; position: relative; word-wrap: break-word; font-size: 15px; }
         .msg-sender { font-weight: bold; font-size: 12px; margin-bottom: 5px; cursor: pointer; }
-        
         .msg-mine { background-color: #dcf8c6; align-self: flex-end; border-top-left-radius: 0; }
         .msg-mine .msg-sender { color: #075e54; }
         .msg-other { background-color: #ffffff; align-self: flex-start; border-top-right-radius: 0; }
         .msg-other .msg-sender { color: #34b7f1; }
-        
         .delete-btn { font-size: 12px; color: red; cursor: pointer; margin-right: 10px; float: left; border: none; background: transparent; }
 
         .chat-input-area { display: flex; padding: 10px; background: #f0f0f0; align-items: center; gap: 10px; }
         .chat-input-area input { flex: 1; padding: 15px; border-radius: 30px; border: none; outline: none; font-size: 15px; }
         .chat-input-area button { background: #128C7E; color: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
 
-        /* شريط التنقل السفلي */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); }
         .bottom-nav button { flex: 1; padding: 15px 0; background: none; border: none; font-size: 16px; font-weight: bold; color: #555; cursor: pointer; transition: 0.3s; border-top: 3px solid transparent; }
         .bottom-nav button.active { color: #075e54; border-top: 3px solid #075e54; background: #f9f9f9; }
 
-        /* أنيميشن */
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -118,11 +115,8 @@
                 </div>
             </section>
 
-            <section id="tab-alhan" class="page-content hidden">
-            </section>
-
-            <section id="tab-taranim" class="page-content hidden">
-            </section>
+            <section id="tab-alhan" class="page-content hidden"></section>
+            <section id="tab-taranim" class="page-content hidden"></section>
         </main>
 
         <nav class="bottom-nav">
@@ -133,22 +127,18 @@
     </div>
 
     <script>
-        // تسجيل الـ Service Worker الحقيقي من الملف الخارجي sw.js لتفعيل الـ PWA بالكامل
+        // تسجيل الـ Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('تم تسجيل الـ Service Worker بنجاح!', reg))
-                .catch(err => console.log('فشل تسجيل الـ Service Worker:', err));
+                navigator.serviceWorker.register('sw.js');
             });
         }
 
-        // دخول الموقع
         function enterSite() {
             document.getElementById('intro-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
         }
 
-        // التبديل بين الصفحات
         function switchTab(tabId, title) {
             document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
@@ -158,26 +148,106 @@
             document.getElementById('header-title').innerText = title;
         }
 
-        // توليد كروت الألحان والترانيم
+        // توليد الكروت مضاف إليها عناصر شريط التحميل
         function generateAudioCards(containerId, prefix, namePrefix, count) {
             const container = document.getElementById(containerId);
             for (let i = 1; i <= count; i++) {
                 const fileName = `${prefix}${i}.mp3`;
+                const fileId = `${prefix}${i}`;
                 container.innerHTML += `
                     <div class="audio-card">
                         <h4>${namePrefix} رقم ${i}</h4>
-                        <audio controls controlsList="nodownload">
-                            <source src="${fileName}" type="audio/mpeg">
+                        <audio controls controlsList="nodownload" src="${fileName}">
                             متصفحك لا يدعم تشغيل الصوت.
                         </audio>
+                        <div class="download-status">
+                            <div class="progress-bar-container" id="prog-container-${fileId}">
+                                <div class="progress-bar" id="prog-bar-${fileId}"></div>
+                            </div>
+                            <span class="status-text" id="status-${fileId}">جاري التحقق من الملف...</span>
+                        </div>
                     </div>
                 `;
             }
         }
+
         generateAudioCards('tab-alhan', 'Lhn', 'لحن', 5);
         generateAudioCards('tab-taranim', 'Tranem', 'ترنيمة', 5);
+
+        // دالة تحميل وحفظ الملفات في الخلفية مع عرض النسبة المئوية
+        async function downloadAndCacheOffline(fileName, fileId) {
+            const cacheName = 'church-app-v4';
+            const cache = await caches.open(cacheName);
+            const cachedResponse = await cache.match(fileName);
+            
+            const statusText = document.getElementById(`status-${fileId}`);
+            const progContainer = document.getElementById(`prog-container-${fileId}`);
+            const progBar = document.getElementById(`prog-bar-${fileId}`);
+
+            // لو الملف متحمل قبل كده وموجود في الموبايل
+            if (cachedResponse) {
+                statusText.innerText = '✅ تم التحميل (متاح أوفلاين بدون إنترنت)';
+                statusText.style.color = '#128C7E';
+                progContainer.style.display = 'none';
+                return;
+            }
+
+            // لو مش متحمل، هنبدأ نحمله ونعرض النسبة
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', fileName, true);
+                xhr.responseType = 'blob'; // استلام كملف
+
+                xhr.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percent = Math.round((event.loaded / event.total) * 100);
+                        progBar.style.width = percent + '%';
+                        statusText.innerText = `⏳ جاري التحميل... ${percent}%`;
+                    }
+                };
+
+                xhr.onload = async () => {
+                    if (xhr.status === 200) {
+                        const response = new Response(xhr.response);
+                        await cache.put(fileName, response); // حفظه في الموبايل للأبد
+                        statusText.innerText = '✅ تم التحميل (متاح أوفلاين بدون إنترنت)';
+                        statusText.style.color = '#128C7E';
+                        progContainer.style.display = 'none';
+                        resolve();
+                    } else {
+                        statusText.innerText = '❌ فشل التحميل، تأكد من الإنترنت';
+                        statusText.style.color = 'red';
+                        reject();
+                    }
+                };
+
+                xhr.onerror = () => {
+                    statusText.innerText = '❌ حدث خطأ، يرجى المحاولة لاحقاً';
+                    statusText.style.color = 'red';
+                    reject();
+                };
+
+                xhr.send();
+            });
+        }
+
+        // تشغيل التحميل لكل الملفات أول ما الموقع يفتح
+        window.addEventListener('load', async () => {
+            const filesToDownload = [];
+            for(let i=1; i<=5; i++) {
+                filesToDownload.push({ file: `Lhn${i}.mp3`, id: `Lhn${i}` });
+                filesToDownload.push({ file: `Tranem${i}.mp3`, id: `Tranem${i}` });
+            }
+            
+            // بيحملهم ورا بعض عشان ميسحبش نت كتير مرة واحدة والموبايل يهنج
+            for (const item of filesToDownload) {
+                await downloadAndCacheOffline(item.file, item.id);
+            }
+        });
+
     </script>
 
+    <!-- الفايربيز وحفظ الاسم تلقائياً -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
@@ -199,7 +269,6 @@
         let currentUser = "";
         const messagesRef = ref(db, 'chat_messages');
 
-        // فحص وجود اسم محفوظ مسبقاً لتسجيل الدخول التلقائي
         function checkSavedUser() {
             const savedName = localStorage.getItem('chat_username');
             if (savedName) {
@@ -210,7 +279,6 @@
             }
         }
 
-        // تسجيل الدخول اليدوي وحفظ الاسم بالذاكرة الدائمة للموبايل
         document.getElementById('join-chat-btn').addEventListener('click', () => {
             const nameInput = document.getElementById('username-input').value.trim();
             if (nameInput) {
@@ -224,7 +292,6 @@
             }
         });
 
-        // إرسال رسالة
         function sendMessage() {
             const msgInput = document.getElementById('msg-input');
             const text = msgInput.value.trim();
@@ -236,7 +303,6 @@
         document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
-        // استقبال الرسائل وعرضها
         onChildAdded(messagesRef, (snapshot) => {
             const msgData = snapshot.val();
             const msgKey = snapshot.key;
@@ -286,7 +352,6 @@
             });
         }
 
-        // تشغيل فحص الاسم المحفوظ فوراً
         checkSavedUser();
     </script>
 </body>
