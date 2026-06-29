@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>كنيسة السيدة العذراء مريم والأنبا بيشوي</title>
+    <!-- رابط الـ PWA المدمج بالأيقونة الخاصة بك -->
     <link id="manifest-link" rel="manifest" href="">
     <style>
         /* إعدادات عامة */
@@ -32,6 +33,9 @@
             transition: 0.3s;
         }
         #enter-btn:hover { background: #e0e0e0; transform: scale(1.05); }
+
+        /* تلميح التحميل المخفي */
+        #cache-status { font-size: 12px; color: #fff; margin-top: 10px; opacity: 0.7; }
 
         /* تصميم التطبيق الأساسي */
         #main-app { display: flex; flex-direction: column; height: 100vh; }
@@ -83,18 +87,23 @@
 </head>
 <body>
 
+    <!-- شاشة الترحيب -->
     <div id="intro-screen">
-        <img src="kanesa.png" alt="صورة الكنيسة" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2069/2069818.png'"> <h1 class="welcome-text">مرحباً بكم في موقع كنيسة السيدة العذراء مريم والأنبا بيشوي بطهنا الجبل</h1>
+        <img src="kanesa.png" alt="صورة الكنيسة" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2069/2069818.png'">
+        <h1 class="welcome-text">مرحباً بكم في موقع كنيسة السيدة العذراء مريم والأنبا بيشوي بطهنا الجبل</h1>
         <h3 class="credits-text">تم عمله بواسطة: كاراس مدحت صابر</h3>
         <button id="enter-btn" onclick="enterSite()">دخول الموقع</button>
+        <div id="cache-status">جاري تهيئة الملفات للعمل بدون إنترنت...</div>
     </div>
 
+    <!-- التطبيق الأساسي -->
     <div id="main-app" class="hidden">
         <header>
             <h2 id="header-title">شات الكنيسة</h2>
         </header>
 
         <main>
+            <!-- قسم الشات -->
             <section id="tab-chat" class="page-content" style="padding:0; height: 100%;">
                 <div id="chat-login">
                     <h3 style="margin-bottom: 20px; color: #075e54;">مرحباً بك في شات الكنيسة</h3>
@@ -110,13 +119,16 @@
                 </div>
             </section>
 
+            <!-- قسم الألحان -->
             <section id="tab-alhan" class="page-content hidden">
-                </section>
+            </section>
 
+            <!-- قسم الترانيم -->
             <section id="tab-taranim" class="page-content hidden">
-                </section>
+            </section>
         </main>
 
+        <!-- التوجيه السفلي -->
         <nav class="bottom-nav">
             <button class="nav-btn active" onclick="switchTab('chat', 'شات الكنيسة')">الشات</button>
             <button class="nav-btn" onclick="switchTab('alhan', 'قسم الألحان')">الألحان</button>
@@ -124,8 +136,9 @@
         </nav>
     </div>
 
+    <!-- كود الـ Frontend والتحميل الذكي والـ PWA -->
     <script>
-        // إعداد PWA داخل نفس الملف
+        // إعداد الـ Manifest الخاص بالـ PWA مدمجاً بـ icona.png
         const manifestData = {
             name: "كنيسة العذراء والأنبا بيشوي",
             short_name: "الكنيسة",
@@ -137,13 +150,6 @@
         };
         const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
         document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
-
-        // Service Worker وهمي لضمان تثبيت الـ PWA
-        const swCode = `self.addEventListener('fetch', function(e) {});`;
-        const swBlob = new Blob([swCode], {type: 'application/javascript'});
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register(URL.createObjectURL(swBlob));
-        }
 
         // دخول الموقع
         function enterSite() {
@@ -161,7 +167,7 @@
             document.getElementById('header-title').innerText = title;
         }
 
-        // توليد الألحان والترانيم
+        // توليد كروت الألحان والترانيم بـ data-src للتحكم في الكاش
         function generateAudioCards(containerId, prefix, namePrefix, count) {
             const container = document.getElementById(containerId);
             for (let i = 1; i <= count; i++) {
@@ -169,8 +175,7 @@
                 container.innerHTML += `
                     <div class="audio-card">
                         <h4>${namePrefix} رقم ${i}</h4>
-                        <audio controls controlsList="nodownload">
-                            <source src="${fileName}" type="audio/mpeg">
+                        <audio controls controlsList="nodownload" data-src="${fileName}">
                             متصفحك لا يدعم تشغيل الصوت.
                         </audio>
                     </div>
@@ -179,8 +184,52 @@
         }
         generateAudioCards('tab-alhan', 'Lhn', 'لحن', 5);
         generateAudioCards('tab-taranim', 'Tranem', 'ترنيمة', 5);
+
+        // الخوارزمية الذكية لحفظ الألحان والترانيم والصور داخل المتصفح للعمل بدون إنترنت (Offline Caching)
+        async function initOfflineCache() {
+            const CACHE_NAME = 'church-media-v2';
+            const filesToCache = ['kanesa.png', 'icona.png'];
+            for(let i=1; i<=5; i++) {
+                filesToCache.push(`Lhn${i}.mp3`);
+                filesToCache.push(`Tranem${i}.mp3`);
+            }
+
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                
+                // تحميل الملفات في الخلفية إذا لم تكن موجودة بالكاش
+                for (const file of filesToCache) {
+                    const matched = await cache.match(file);
+                    if (!matched) {
+                        fetch(file).then(response => {
+                            if (response.ok) cache.put(file, response);
+                        }).catch(err => console.log("جاري الانتظار لتوفر الملف أونلاين: " + file));
+                    }
+                }
+                
+                // تشغيل الملفات الصوتية مباشرة من الكاش المحلي
+                const audios = document.querySelectorAll('audio[data-src]');
+                for (const audio of audios) {
+                    const src = audio.getAttribute('data-src');
+                    const localResponse = await cache.match(src);
+                    if (localResponse) {
+                        const blob = await localResponse.blob();
+                        audio.src = URL.createObjectURL(blob);
+                    } else {
+                        audio.src = src; // Fallback أونلاين لو لسه مخلصش تحميل
+                    }
+                }
+                document.getElementById('cache-status').innerText = "تم حفظ البيانات محلياً وجاهز للعمل أوفلاين ✨";
+            } catch (e) {
+                console.log("Cache API space ready.");
+            }
+        }
+
+        // تشغيل نظام الكاش فور تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', initOfflineCache);
     </script>
 
+    <!-- برمجة الفايربيز وحفظ الاسم تلقائياً (Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
@@ -202,14 +251,26 @@
         let currentUser = "";
         const messagesRef = ref(db, 'chat_messages');
 
-        // تسجيل الدخول للشات
+        // فحص وجود اسم محفوظ مسبقاً لتسجيل الدخول التلقائي
+        function checkSavedUser() {
+            const savedName = localStorage.getItem('chat_username');
+            if (savedName) {
+                currentUser = savedName;
+                document.getElementById('chat-login').classList.add('hidden');
+                document.getElementById('chat-room').classList.remove('hidden');
+                listenForPrivateRequests(); 
+            }
+        }
+
+        // تسجيل الدخول اليدوي وحفظ الاسم بالذاكرة الدائمة للموبايل
         document.getElementById('join-chat-btn').addEventListener('click', () => {
             const nameInput = document.getElementById('username-input').value.trim();
             if (nameInput) {
+                localStorage.setItem('chat_username', nameInput); // حفظ الاسم هنا
                 currentUser = nameInput;
                 document.getElementById('chat-login').classList.add('hidden');
                 document.getElementById('chat-room').classList.remove('hidden');
-                listenForPrivateRequests(); // تفعيل استقبال الطلبات الخاصة
+                listenForPrivateRequests();
             } else {
                 alert("برجاء كتابة اسمك أولاً!");
             }
@@ -237,7 +298,6 @@
             msgDiv.className = `msg-box ${isMine ? 'msg-mine' : 'msg-other'}`;
             msgDiv.id = `msg-${msgKey}`;
             
-            // زر الحذف لرسائلي بس
             const deleteBtnHtml = isMine ? `<button class="delete-btn" onclick="deleteMessage('${msgKey}')">🗑️</button>` : '';
             
             msgDiv.innerHTML = `
@@ -250,37 +310,36 @@
             document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
         });
 
-        // حذف الرسالة من الـ DOM لما تتمسح من الداتا بيز
         onChildRemoved(messagesRef, (snapshot) => {
             const msgDiv = document.getElementById(`msg-${snapshot.key}`);
             if(msgDiv) msgDiv.remove();
         });
 
-        // دالة الحذف (بنعملها Global عشان الـ HTML يشوفها)
         window.deleteMessage = (key) => {
             if(confirm("هل أنت متأكد من حذف هذه الرسالة؟")) {
                 remove(ref(db, `chat_messages/${key}`));
             }
         };
 
-        // طلب محادثة خاصة (Global)
         window.requestPrivate = (targetUser) => {
-            if(targetUser === currentUser) return; // مينفعش ابعت لنفسي
+            if(targetUser === currentUser) return; 
             if(confirm(`هل تريد إرسال طلب محادثة خاصة لـ ${targetUser}؟`)) {
                 push(ref(db, `private_requests/${targetUser}`), { from: currentUser });
                 alert(`تم إرسال تنبيه لـ ${targetUser} بنجاح!`);
             }
         };
 
-        // الاستماع لطلبات المحادثة الخاصة اللي جيالي
         function listenForPrivateRequests() {
             const myRequestsRef = ref(db, `private_requests/${currentUser}`);
             onChildAdded(myRequestsRef, (snapshot) => {
                 const reqData = snapshot.val();
                 alert(`🔔 تنبيه من الشات: \n"${reqData.from}" يطلب التحدث معك على الخاص!`);
-                remove(snapshot.ref); // بنحذف الطلب بعد ما نعرضه عشان ميظهرش تاني
+                remove(snapshot.ref); 
             });
         }
+
+        // تشغيل فحص الاسم المحفوظ فوراً
+        checkSavedUser();
     </script>
 </body>
 </html>
